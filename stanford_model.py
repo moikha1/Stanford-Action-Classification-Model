@@ -116,7 +116,7 @@ def label_img(img): #this labels the images
     label[i] = 1
     return label
 
-def label_to_string(label):
+def label_to_string(label):#converts label to action
     if label[0] == 1: action = 'applauding'
     elif label[1] == 1: action = 'blowing'
     elif label[2] == 1: action = 'brushing'
@@ -177,7 +177,7 @@ def get_cv2_image(path, IMG_SIZE, color_type):
     img = cv2.resize(img, (IMG_SIZE, IMG_SIZE)) 
     return img
 
-def create_train_data(): #creates the x-variable of the training data
+def create_train_data(): #creates the x and y variables for the training data
     training_data = []
     for img in tqdm(os.listdir(trainPath)):
         label = label_img(img)
@@ -189,100 +189,44 @@ def create_train_data(): #creates the x-variable of the training data
     return training_data
 
 #def process_test_data():
-    
 #%%
 #testing
 txt = "waving_hands_182.jpg"
 label = label_img(txt)
 path = os.path.join(trainPath,txt)
 img = get_cv2_image(path, IMG_SIZE, 3)
-
 plt.imshow(img)
-#print(img)
-#print(np.array(img))
-#print(label)
 print(np.array(label))
 print(label_to_string(label))
 
 #%%
 def create_model():
-    '''
-    transferModel = VGG16(weights="imagenet", include_top=False, input_shape=(IMG_SIZE, IMG_SIZE, 3))
-    x = Flatten(name='flatten')(transferModel)
-    x = Dense(4096, activation='relu', name='fc1')(x)
-    x = Dense(4096, activation='relu', name='fc2')(x)
-    x = Dense(NUMBER_CLASSES, activation='softmax', name='predictions')(x)
-    model = Model(input=transferModel.input, output=x)
-    '''
     model_vgg16_conv = VGG16(weights='imagenet', include_top=False)
-    #model_vgg16_conv.summary()
-    
-    #Create your own input format
     keras_input = Input(shape=(IMG_SIZE, IMG_SIZE, color_type), name = 'image_input')
-    
-    #Use the generated model 
     output_vgg16_conv = model_vgg16_conv(keras_input)
-    
-    #Add the fully-connected layers 
     x = Flatten(name='flatten')(output_vgg16_conv)
     x = Dense(4096, activation='relu', name='fc1')(x)
     x = Dense(4096, activation='relu', name='fc2')(x)
     x = Dense(NUMBER_CLASSES, activation='softmax', name='predictions')(x)
-    
-    #Create your own model 
     pretrained_model = Model(inputs=keras_input, outputs=x)
     pretrained_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    
     return pretrained_model
-    
-def create_model_thisactuallyworksbutidontlikethisone():
-    convnet = input_data(shape=[None, IMG_SIZE, IMG_SIZE, color_type], name='input')
-
-    convnet = conv_2d(convnet, 32, 5, activation='relu')
-    convnet = max_pool_2d(convnet, 5)
-
-    convnet = conv_2d(convnet, 64, 5, activation='relu')
-    convnet = max_pool_2d(convnet, 5)
-    
-    convnet = conv_2d(convnet, 128, 5, activation='relu')
-    convnet = max_pool_2d(convnet, 5)
-
-    convnet = conv_2d(convnet, 64, 5, activation='relu')
-    convnet = max_pool_2d(convnet, 5)
-
-    convnet = conv_2d(convnet, 32, 5, activation='relu')
-    convnet = max_pool_2d(convnet, 5)
-
-    convnet = fully_connected(convnet, 1024, activation='relu')
-    convnet = dropout(convnet, 0.8)
-
-    convnet = fully_connected(convnet, NUMBER_CLASSES, activation='softmax')
-    convnet = regression(convnet, optimizer='adam', learning_rate=LR, loss='categorical_crossentropy', name='targets')
-
-    model = tflearn.DNN(convnet, tensorboard_dir='log')
-    return model
 
 model = create_model()
 model.summary()
-'''
-model.compile(optimizer='adam',  # Good default optimizer to start with
-              loss='sparse_categorical_crossentropy',  # how will we calculate our "error." Neural network aims to minimize loss.
-              metrics=['accuracy'])  # what to track
-'''
-
 #%%
 train = create_train_data()
 #%%
 #If you have already created the dataset:
 #train = np.load('train_data.npy')
 
-x = np.array([i[0] for i in train], dtype=np.uint8).reshape(-1, IMG_SIZE, IMG_SIZE, color_type)#(x_train, dtype=np.uint8)
-y = np.array([i[1] for i in train])#np_utils.to_categorical(y_train, NUMBER_CLASSES)
+x_train = np.array([i[0] for i in train], dtype=np.uint8).reshape(-1, IMG_SIZE, IMG_SIZE, color_type)#(x_train, dtype=np.uint8)
+y_train = np.array([i[1] for i in train]).reshape(-1, NUMBER_CLASSES)#np_utils.to_categorical(y_train, NUMBER_CLASSES)
 
-print('There are %s total images.\n' % (len(x)))
+print('There are %s total images.\n' % (len(x_train)))
 #%%
 
-model.fit(x, y, batch_size=batch_size, epochs = nb_epoch)  # train the model
+model.fit(x_train, y_train, batch_size=batch_size, epochs=nb_epoch)  # train the model
 
 '''
 model.fit(x, y, batch_size=batch_size, epochs = nb_epoch)  # train the model
@@ -302,6 +246,4 @@ print(predictions)
 print(np.argmax(predictions[0]))
 plt.imshow(x_test[0], cmap=plt.cm.binary)
 plt.show()
-
-#%%
 print(label_to_string((predictions[0])))
