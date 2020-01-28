@@ -42,11 +42,12 @@ from tflearn.layers.estimator import regression
 from tensorflow.keras import datasets, layers, models
 
 #importing all the necessary modules/packages for this project
-#print("Num GPUs Available: " , len(tensorflow.config.experimental.list_physical_devices('GPU')))
 #%%
-trainPath = 'C:/Users/LENOVO USER/Downloads/Stanford40/JPEGImages' #where the image set is located
+print("Num GPUs Available: " , len(tensorflow.config.experimental.list_physical_devices('GPU')))
+#%%
+trainPath = 'C:/Users/Sarwar/Downloads/Stanford40/JPEGImages' #where the image set is located
 IMG_SIZE = 224
-batch_size = 300
+batch_size = 1000
 nb_epoch = 1
 NUMBER_CLASSES = 40
 color_type = 3
@@ -66,7 +67,6 @@ def label_img(img): #this labels the images
     else:
         word_4 = 'nada'
         
-    label = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     i = 0
     # 40-labels conversion ladder 
     if word_label == 'applauding': i = 0
@@ -113,10 +113,11 @@ def label_img(img): #this labels the images
     elif word_label == 'writing' and word_4 == 'board': i = 38
     elif word_label == 'writing': i = 39
     #40
-    label[i] = 1
-    return label
+    return i
 
-def label_to_string(label):#converts label to action
+def label_to_string(i):#converts label to action
+    label = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    label[i] = 1
     if label[0] == 1: action = 'applauding'
     elif label[1] == 1: action = 'blowing'
     elif label[2] == 1: action = 'brushing'
@@ -178,15 +179,17 @@ def get_cv2_image(path, IMG_SIZE, color_type):
     return img
 
 def create_train_data(): #creates the x and y variables for the training data
-    training_data = []
+    training_data_x = []
+    training_data_y = []
     for img in tqdm(os.listdir(trainPath)):
         label = label_img(img)
         path = os.path.join(trainPath,img)
         img = get_cv2_image(path, IMG_SIZE, color_type)
-        training_data.append([np.array(img),np.array(label)])
+        training_data_x.append([np.array(img)])
+        training_data_y.append(label)
     #shuffle(training_data)
     #np.save('train_data.npy', training_data)
-    return training_data
+    return training_data_x, training_data_y
 
 #def process_test_data():
 #%%
@@ -209,24 +212,23 @@ def create_model():
     x = Dense(4096, activation='relu', name='fc2')(x)
     x = Dense(NUMBER_CLASSES, activation='softmax', name='predictions')(x)
     pretrained_model = Model(inputs=keras_input, outputs=x)
-    pretrained_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    pretrained_model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
     return pretrained_model
 
 model = create_model()
 model.summary()
 #%%
-train = create_train_data()
+train_x, train_y = create_train_data()
 #%%
 #If you have already created the dataset:
 #train = np.load('train_data.npy')
 
-x_train = np.array([i[0] for i in train], dtype=np.uint8).reshape(-1, IMG_SIZE, IMG_SIZE, color_type)#(x_train, dtype=np.uint8)
-y_train = np.array([i[1] for i in train]).reshape(-1, NUMBER_CLASSES)#np_utils.to_categorical(y_train, NUMBER_CLASSES)
+x_train = np.array(train_x, dtype=np.uint8).reshape(-1, IMG_SIZE, IMG_SIZE, color_type)
+y_train = np_utils.to_categorical(train_y, NUMBER_CLASSES)#np.array([i[1] for i in train]).reshape(-1, NUMBER_CLASSES)
 
 print('There are %s total images.\n' % (len(x_train)))
 #%%
-
-model.fit(x_train, y_train, batch_size=batch_size, epochs=nb_epoch)  # train the model
+model.fit(x_train[-500:], y_train[-500:], epochs=nb_epoch)  # train the model
 
 '''
 model.fit(x, y, batch_size=batch_size, epochs = nb_epoch)  # train the model
