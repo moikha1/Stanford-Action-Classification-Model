@@ -2,15 +2,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 from glob import glob
-import random
 import time
 import tensorflow
-import datetime
-os.environ['KERAS_BACKEND'] = 'tensorflow'
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # 3 = INFO, WARNING, and ERROR messages are not printed
+#os.environ['KERAS_BACKEND'] = 'tensorflow'
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # 3 = INFO, WARNING, and ERROR messages are not printed
 
 from tqdm import tqdm
-
+from keras.utils import np_utils
 import numpy as np
 import pandas as pd
 from IPython.display import FileLink
@@ -24,16 +22,17 @@ import cv2
 
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_files       
-from keras.utils import np_utils
 from sklearn.utils import shuffle
 from sklearn.metrics import log_loss
+
+from keras.applications.vgg16 import VGG16
 
 from keras.models import Sequential, Model
 from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization, GlobalAveragePooling2D, Input
 from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing import image
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.applications.vgg16 import VGG16
+
 
 import tflearn
 from tflearn.layers.conv import conv_2d, max_pool_2d
@@ -228,7 +227,7 @@ y_train = np_utils.to_categorical(train_y, NUMBER_CLASSES)#np.array([i[1] for i 
 
 print('There are %s total images.\n' % (len(x_train)))
 #%%
-model.fit(x_train[-500:], y_train[-500:], epochs=nb_epoch)  # train the model
+model.fit(x_train, y_train, batch_size=batch_size, epochs=nb_epoch)  # train the model
 
 '''
 model.fit(x, y, batch_size=batch_size, epochs = nb_epoch)  # train the model
@@ -239,7 +238,7 @@ model.fit({'input': x}, {'targets': y}, n_epoch=nb_epoch,
 '''
 #%%
 
-test = train[-500:]
+test = x_train[-500:]
 x_test = np.array([i[0] for i in test]).reshape(-1,IMG_SIZE,IMG_SIZE, color_type)
 #model.save('action_stanford.model')
 #new_model = tensorflow.keras.models.load_model('action_stanford.model')
